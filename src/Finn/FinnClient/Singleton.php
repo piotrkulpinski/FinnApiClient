@@ -2,12 +2,11 @@
 
 namespace Finn\FinnClient;
 
-//Cheating with magic methods on the model
-class Property
+class Singleton
 {
     public function __get($prop)
     {
-        if(isset($this->$prop)) {
+        if (isset($this->$prop)) {
             return $this->$prop;
         } else {
             return null;
@@ -19,5 +18,3 @@ class Property
         $this->$prop = $val;
     }
 }
-
-?>

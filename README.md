@@ -9,11 +9,11 @@ Add this to your projects composer.json file
 "repositories": [
 	{
 		"type": "vcs",
-		"url": "https://github.com/luhmor/FinnApiClient"
+		"url": "https://github.com/piotrkulpinski/FinnApiClient"
 	}
 ],
 "require": {
-	"reeltime/finnapiclient":"1.*"
+	"piotrkulpinski/finnapiclient":"1.*"
 }
 ```
 
@@ -70,6 +70,3 @@ $result = $client->search('realestate-homes', array(
 $result = $client->getObject('realestate-homes', 48305632);
 
 ```
-
-
-
