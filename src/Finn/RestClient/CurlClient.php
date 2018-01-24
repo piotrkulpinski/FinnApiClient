@@ -11,12 +11,12 @@ class CurlClient implements ClientInterface
         'userAgent'     => '',
     );
 
-    public function __construct($settings)
+    public function __construct($settings = array())
     {
         $this->settings = array_merge($this->settings, $settings);
     }
 
-    private function setOpts($data = null)
+    private function setOpts()
     {
         $opts = array(
             CURLOPT_RETURNTRANSFER => 1,
