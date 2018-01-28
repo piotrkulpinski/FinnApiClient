@@ -83,16 +83,18 @@ class FinnClient
         $isPrivate = 'false';
         $status = ';
         $adType = ';
+
         foreach ($entry->category as $category) {
             if ($category->attributes()->scheme =='urn:finn:ad:private') {
                 $isPrivate = $category->attributes()->term;
             }
-            //if disposed == true, show the label
+
             if ($category->attributes()->scheme =='urn:finn:ad:disposed') {
                 if ($entry->category->attributes()->term == 'true') {
                     $status = $category->attributes()->label;
                 }
             }
+
             if ($category->attributes()->scheme =='urn:finn:ad:type') {
                 $adType = $category->attributes()->label;
             }
