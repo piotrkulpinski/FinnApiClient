@@ -74,9 +74,13 @@ class FinnClient
 
         $links = array();
         foreach ($entry->link as $link) {
-            $rel = $link->attributes()->rel;
-            $ref = $link->attributes()->href;
-            $links['$rel'] = '$ref';
+            $rel = (string) $link->attributes()->rel;
+            $ref = (string) $link->attributes()->href;
+
+            array_push($links, array(
+                'rel' => $rel,
+                'ref' => $ref,
+            ));
         }
         $property->links = $links;
 
@@ -137,11 +141,11 @@ class FinnClient
                 }
             }
             array_push($contacts, array(
-                'name' => $name,
-                'title' => $title,
-                'work' => $work,
-                'mobile' => $mobile,
-                'fax' => $fax
+                'name'      => isset($name) ? $name : null,
+                'title'     => isset($title) ? $title : null,
+                'work'      => isset($work) ? $work : null,
+                'mobile'    => isset($mobile) ? $mobile : null,
+                'fax'       => isset($fax) ? $fax : null
             ));
         }
 
@@ -290,8 +294,8 @@ class FinnClient
 
             array_push($sorts, array(
                 'selected' => (bool) $fattrs['selected'],
-                'value' => $fattrs['sort'],
-                'title' => $attrs['title'],
+                'value' => (string) $fattrs['sort'],
+                'title' => (string) $attrs['title'],
             ));
         }
         $resultset->sort = $sorts;
@@ -299,8 +303,8 @@ class FinnClient
         //navigation links
         $links = array();
         foreach ($xml->link as $link) {
-            $rel = $link->attributes()->rel;
-            $ref = $link->attributes()->href;
+            $rel = (string) $link->attributes()->rel;
+            $ref = (string) $link->attributes()->href;
 
             array_push($links, array(
                 'rel' => $rel,
