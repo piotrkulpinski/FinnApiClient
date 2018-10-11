@@ -85,22 +85,24 @@ class FinnClient
         $property->links = $links;
 
         $isPrivate = 'false';
-        $status = ';
-        $adType = ';
+        $status = '';
+        $adType = '';
 
         foreach ($entry->category as $category) {
-            if ($category->attributes()->scheme =='urn:finn:ad:private') {
-                $isPrivate = $category->attributes()->term;
+            $attributes = $category->attributes();
+
+            if ($attributes->scheme == 'urn:finn:ad:private') {
+                $isPrivate = $attributes->term;
             }
 
-            if ($category->attributes()->scheme =='urn:finn:ad:disposed') {
-                if ($entry->category->attributes()->term == 'true') {
-                    $status = $category->attributes()->label;
+            if ($attributes->scheme == 'urn:finn:ad:disposed') {
+                if ($attributes->term == 'true') {
+                    $status = $attributes->label;
                 }
             }
 
-            if ($category->attributes()->scheme =='urn:finn:ad:type') {
-                $adType = $category->attributes()->label;
+            if ($attributes->scheme == 'urn:finn:ad:type') {
+                $adType = $attributes->term;
             }
         }
 
@@ -112,19 +114,23 @@ class FinnClient
         $property->city = (string) $location->children($ns['finn'])->city;
         $property->address = (string) $location->children($ns['finn'])->address;
         $property->postalCode = (string) $location->children($ns['finn'])->{'postal-code'};
-        $geo = explode(' ', (string) $entry->children($ns['georss'])->point);
 
-        if (!empty($geo)) {
-            $property->geo = array(
-                'lat' => $geo[0],
-                'lng' => $geo[1],
-            );
+        if (!empty($ns['georss'])) {
+            $geo = explode(' ', (string) $entry->children($ns['georss'])->point);
+
+            if (!empty($geo)) {
+                $property->geo = array(
+                    'lat' => $geo[0],
+                    'lng' => $geo[1],
+                );
+            }
         }
 
         $contacts = array();
 
         foreach($entry->children($ns['finn'])->contact as $contact) {
             $name = (string) $contact->children()->name;
+            $email = (string) $contact->children()->email;
             $title = (string) $contact->attributes()->title;
 
             foreach($contact->{'phone-number'} as $numbers) {
@@ -142,6 +148,7 @@ class FinnClient
             }
             array_push($contacts, array(
                 'name'      => isset($name) ? $name : null,
+                'email'     => isset($email) ? $email : null,
                 'title'     => isset($title) ? $title : null,
                 'work'      => isset($work) ? $work : null,
                 'mobile'    => isset($mobile) ? $mobile : null,
@@ -155,7 +162,6 @@ class FinnClient
 
         $images = array();
         if ($entry->children($ns['media']) && $entry->children($ns['media'])->content->attributes()) {
-            //$images = $entry->children($ns['media'])->content->attributes();
             foreach($entry->children($ns['media'])->content as $content) {
                 $images[] = current($content->attributes());
             }
@@ -166,19 +172,53 @@ class FinnClient
 
         $adata = $entry->children($ns['finn'])->adata;
         foreach ($adata->children($ns['finn'])->field as $field) {
-            if ($field->attributes()->name == 'no_of_bedrooms') {
-                $property->numberOfBedrooms = (string) $field->attributes()->value;
+            $attributes = $field->attributes();
+
+            if ($attributes->name == 'housing_unit') {
+                $property->housingUnit = (string) explode(', ', $attributes->value)[0];
             }
 
-            if ($field->attributes()->name == 'property_type') {
+            if ($attributes->name == 'floor') {
+                $property->floor = (string) explode(', ', $attributes->value)[0];
+            }
+
+            if ($attributes->name == 'no_of_floors') {
+                $property->numberOfFloors = (string) $attributes->value;
+            }
+
+            if ($attributes->name == 'no_of_units') {
+                $property->numberOfUnits = (string) $attributes->value;
+            }
+
+            if ($attributes->name == 'no_of_bedrooms') {
+                if ($attributes->value) {
+                    $property->numberOfBedrooms = (string) $attributes->value;
+                } elseif ($attributes->from && $attributes->to) {
+                    $property->numberOfBedrooms = (string) ($attributes->from . ' &mdash; ' . $attributes->to);
+                }
+            }
+
+            if ($attributes->name == 'no_of_rooms') {
+                $property->numberOfRooms = (string) $attributes->value;
+            }
+
+            if ($attributes->name == 'property_type') {
                 $property->propertyType = (string) $field->children($ns['finn'])->value;
             }
 
-            if ($field->attributes()->name == 'ownership_type') {
-                $property->ownershipType = (string) $field->attributes()->value;
+            if ($attributes->name == 'ownership_type') {
+                $property->ownershipType = (string) $attributes->value;
             }
 
-            if ($field->attributes()->name == 'size') {
+            if ($attributes->name == 'viewing_date') {
+                $property->viewingDates = [];
+
+                foreach ($field->children($ns['finn'])->value as $date) {
+                    $property->viewingDates[] = (string) $date;
+                }
+            }
+
+            if ($attributes->name == 'size') {
                 foreach ($field->children($ns['finn'])->field as $sizeField) {
                     if ($sizeField->attributes()->name == 'usable') {
                         $property->usableSize = (string) $sizeField->attributes()->value;
@@ -189,28 +229,28 @@ class FinnClient
                     }
 
                     if ($sizeField->attributes()->from) {
-                        $property->livingSizeFrom = (string) $sizeField->attributes()->from;
+                        $property->primarySizeFrom = (string) $sizeField->attributes()->from;
                     }
 
                     if ($sizeField->attributes()->to) {
-                        $property->livingSizeTo = (string) $sizeField->attributes()->to;
+                        $property->primarySizeTo = (string) $sizeField->attributes()->to;
                     }
                 }
             }
 
-            if ($field->attributes()->name == 'area') {
+            if ($attributes->name == 'area') {
                 foreach ($field->children($ns['finn'])->field as $sizeField) {
                     if ($sizeField->attributes()->name == 'from') {
-                        $property->livingSizeFrom = (string) $sizeField->attributes()->value;
+                        $property->primarySizeFrom = (string) $sizeField->attributes()->value;
                     }
 
                     if ($sizeField->attributes()->name == 'to') {
-                        $property->livingSizeTo = (string) $sizeField->attributes()->value;
+                        $property->primarySizeTo = (string) $sizeField->attributes()->value;
                     }
                 }
             }
 
-            if ($field->attributes()->name == 'facilities') {
+            if ($attributes->name == 'facilities') {
                 $facilities = array();
 
                 foreach($field->children($ns['finn'])->value as $facility) {
@@ -220,52 +260,119 @@ class FinnClient
                 $property->facilities = $facilities;
             }
 
-            if ($field->attributes()->name == 'general_text') {
-                $generalText = array();
+            if ($attributes->name == 'general_text') {
+                $descriptions = array();
                 $i = 0;
 
                 foreach($field->children($ns['finn'])->value as $text) {
                     foreach($text->children($ns['finn'])->field as $t) {
                         if ($t->attributes()->name == 'title') {
-                            $generalText[$i]['title'] = (string) $t->attributes()->value;
+                            $descriptions[$i]['title'] = (string) $t->attributes()->value;
                         }
                         if ($t->attributes()->name == 'value') {
-                            $generalText[$i]['value'] = (string) $t;
+                            $descriptions[$i]['value'] = (string) $t;
                         }
                     }
                     $i++;
                 }
 
-                $property->generalText = $generalText;
+                $property->descriptions = $descriptions;
             }
 
-            if ($field->attributes()->name == 'ingress') {
+            if ($attributes->name == 'ingress') {
                 $property->ingress = (string) $field;
             }
 
-            if ($field->attributes()->name == 'situation') {
+            if ($attributes->name == 'situation') {
                 $property->situation = (string) $field;
+            }
+
+            if ($attributes->name == 'viewings') {
+                $viewings = array();
+                $i = 0;
+
+                foreach($field->children($ns['finn'])->value as $text) {
+                    foreach($text->children($ns['finn'])->field as $t) {
+                        if ($t->attributes()->name == 'note') {
+                            $viewings[$i]['note'] = (string) $t->attributes()->value;
+                        }
+
+                        if ($t->attributes()->name == 'date') {
+                            $viewings[$i]['date'] = (string) $t;
+                        }
+
+                        if ($t->attributes()->name == 'from') {
+                            $viewings[$i]['from'] = (string) $t->attributes()->value;
+                        }
+
+                        if ($t->attributes()->name == 'to') {
+                            $viewings[$i]['to'] = (string) $t->attributes()->value;
+                        }
+                    }
+                    $i++;
+                }
+
+                $property->viewings = $viewings;
             }
         }
 
         foreach ($adata->children($ns['finn'])->price as $price) {
-            if ($price->attributes()->name == 'main') {
-                $property->mainPrice = (string) $price->attributes()->value;
+            $attributes = $price->attributes();
+
+            if ($attributes->name == 'total') {
+                if ($attributes->value) {
+                    $property->totalPrice = (string) $attributes->value;
+                }
+
+                if ($attributes->from) {
+                    $property->totalPriceFrom = (string) $attributes->from;
+                }
+
+                if ($attributes->to) {
+                    $property->totalPriceTo = (string) $attributes->to;
+                }
             }
-            if ($price->attributes()->name == 'total') {
-                $property->totalPrice = (string) $price->attributes()->value;
+
+            if ($attributes->name == 'main') {
+                if ($attributes->value) {
+                    $property->mainPrice = (string) $attributes->value;
+
+                    if (empty($property->totalPrice)) {
+                        $property->totalPrice = $property->mainPrice;
+                    }
+                }
+
+                if ($attributes->from) {
+                    $property->mainPriceFrom = (string) $attributes->from;
+
+                    if (empty($property->totalPriceFrom)) {
+                        $property->totalPriceFrom = $property->mainPriceFrom;
+                    }
+                }
+
+                if ($attributes->to) {
+                    $property->mainPriceTo = (string) $attributes->to;
+
+                    if (empty($property->totalPriceTo)) {
+                        $property->totalPriceTo = $property->mainPriceTo;
+                    }
+                }
             }
-            if ($price->attributes()->name == 'collective_debt') {
-                $property->collectiveDebt = (string) $price->attributes()->value;
+
+            if ($attributes->name == 'collective_debt' && $attributes->value) {
+                $property->collectiveDebt = (string) $attributes->value;
             }
-            if ($price->attributes()->name == 'shared_cost') {
-                $property->sharedCost = (string) $price->attributes()->value;
+
+            if ($attributes->name == 'shared_cost' && $attributes->value) {
+                $property->sharedCost = (string) $attributes->value;
             }
-            if ($price->attributes()->name == 'estimated_value') {
-                $property->estimatedValue = (string) $price->attributes()->value;
+
+            if ($attributes->name == 'estimated_value' && $attributes->value) {
+                $property->estimatedValue = (string) $attributes->value;
             }
-            if ($price->attributes()->name == 'square_meter') {
-                $property->sqmPrice = (string) $price->attributes()->value;
+
+            if ($attributes->name == 'square_meter' && $attributes->value) {
+                $property->sqmPrice = (string) $attributes->value;
             }
         }
 
