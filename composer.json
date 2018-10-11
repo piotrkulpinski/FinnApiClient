@@ -5,6 +5,10 @@
         {
             "name": "Glenn Wedin",
             "email": "glenn@reeltime.no"
+        },
+        {
+            "name": "Piotr Kulpinski",
+            "email": "piotr@kulpinski.pl"
         }
     ],
     "minimum-stability": "dev",
